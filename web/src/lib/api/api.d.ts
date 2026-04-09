@@ -3303,6 +3303,7 @@ export interface operations {
 				public_indexer_result_id: string;
 				show_id: string;
 				override_file_path_suffix?: string;
+				override_season_number?: number;
 			};
 			header?: never;
 			path?: never;

@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from media_manager.config import MediaManagerConfig
 from media_manager.database import get_session
-from media_manager.exceptions import InvalidConfigError, NotFoundError, RenameError
+from media_manager.exceptions import BadRequestError, InvalidConfigError, NotFoundError, RenameError
 from media_manager.indexer.repository import IndexerRepository
 from media_manager.indexer.schemas import IndexerQueryResult, IndexerQueryResultId
 from media_manager.indexer.service import IndexerService
@@ -467,6 +467,7 @@ class TvService:
         public_indexer_result_id: IndexerQueryResultId,
         show_id: ShowId,
         override_show_file_path_suffix: str = "",
+        override_season_number: int | None = None,
     ) -> Torrent:
         """
         Download a torrent for a given indexer result and show.
@@ -474,16 +475,29 @@ class TvService:
         :param public_indexer_result_id: The ID of the indexer result.
         :param show_id: The ID of the show.
         :param override_show_file_path_suffix: Optional override for the file path suffix.
+        :param override_season_number: Optional season number override when the torrent title
+            does not contain a recognisable season tag (e.g. "SXX").
         :return: The downloaded torrent.
         """
         indexer_result = self.indexer_service.get_result(
             result_id=public_indexer_result_id
         )
+
+        if override_season_number is not None:
+            effective_seasons = [override_season_number]
+        elif indexer_result.season:
+            effective_seasons = indexer_result.season
+        else:
+            raise BadRequestError(
+                "No season number could be determined from the torrent title. "
+                "Please provide a season number override."
+            )
+
         show_torrent = self.torrent_service.download(indexer_result=indexer_result)
         self.torrent_service.pause_download(torrent=show_torrent)
 
         try:
-            for season_number in indexer_result.season:
+            for season_number in effective_seasons:
                 season = self.tv_repository.get_season_by_number(
                     season_number=season_number, show_id=show_id
                 )

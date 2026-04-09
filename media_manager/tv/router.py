@@ -448,6 +448,7 @@ def download_a_torrent(
     public_indexer_result_id: IndexerQueryResultId,
     show_id: ShowId,
     override_file_path_suffix: str = "",
+    override_season_number: int | None = None,
 ) -> Torrent:
     """
     Trigger a download for a specific torrent.
@@ -456,6 +457,7 @@ def download_a_torrent(
         public_indexer_result_id=public_indexer_result_id,
         show_id=show_id,
         override_show_file_path_suffix=override_file_path_suffix,
+        override_season_number=override_season_number,
     )
 
 

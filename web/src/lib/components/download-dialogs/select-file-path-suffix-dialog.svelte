@@ -1,22 +1,44 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
+	import { Label } from '$lib/components/ui/label';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import FilePathSuffixSelector from '$lib/components/download-dialogs/file-path-suffix-selector.svelte';
 	import type { components } from '$lib/api/api';
+	import { toast } from 'svelte-sonner';
+	import { convertTorrentSeasonRangeToIntegerRange } from '$lib/utils.ts';
 
 	let {
 		filePathSuffix = $bindable(),
 		media,
+		seasons,
 		callback
 	}: {
 		filePathSuffix: string;
 		media: components['schemas']['Movie'] | components['schemas']['Show'];
-		callback: () => void;
+		/** Parsed seasons from the torrent title. Pass for TV show torrents, omit for movies. */
+		seasons?: number[];
+		callback: (seasonOverride?: number) => void;
 	} = $props();
 	let dialogOpen = $state(false);
+	let seasonOverride: number | undefined = $state(undefined);
 
 	function onDownload() {
-		callback();
+		if (seasons !== undefined && seasons.length === 0) {
+			const isValid =
+				seasonOverride !== undefined && Number.isFinite(seasonOverride) && seasonOverride > 0;
+			if (!isValid) {
+				toast.error(
+					'Could not detect a season number from the torrent title. Please enter it manually.'
+				);
+				return;
+			}
+		}
+		const effectiveOverride =
+			seasonOverride !== undefined && Number.isFinite(seasonOverride) && seasonOverride > 0
+				? seasonOverride
+				: undefined;
+		callback(effectiveOverride);
 		dialogOpen = false;
 	}
 </script>
@@ -32,6 +54,29 @@
 				Set the filepath suffix for downloaded files of the torrent.
 			</Dialog.Description>
 		</Dialog.Header>
+		{#if seasons !== undefined}
+			<div class="mb-4 grid w-full items-center gap-1.5">
+				<Label for="season-override">Season Number</Label>
+				{#if seasons.length > 0}
+					<p class="text-sm text-muted-foreground">
+						Detected season(s): {convertTorrentSeasonRangeToIntegerRange(seasons)}. You can override
+						this if the detection was incorrect.
+					</p>
+				{:else}
+					<p class="text-sm text-destructive">
+						Could not detect a season number from the torrent title. Please enter it manually.
+					</p>
+				{/if}
+				<Input
+					type="number"
+					id="season-override"
+					class="max-w-[200px]"
+					bind:value={seasonOverride}
+					placeholder={seasons.length > 0 ? String(seasons[0]) : 'e.g. 1'}
+					min="1"
+				/>
+			</div>
+		{/if}
 		<FilePathSuffixSelector bind:filePathSuffix {media} />
 		<div class="mt-8 flex justify-between gap-2">
 			<Button onclick={() => (dialogOpen = false)} variant="secondary">Cancel</Button>

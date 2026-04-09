@@ -42,14 +42,15 @@
 		{ name: 'Seasons', id: 'season' }
 	];
 
-	async function downloadTorrent(result_id: string) {
+	async function downloadTorrent(result_id: string, seasonOverride?: number) {
 		torrentsError = null;
 		const { response } = await client.POST('/api/v1/tv/torrents', {
 			params: {
 				query: {
 					show_id: show.id!,
 					public_indexer_result_id: result_id,
-					override_file_path_suffix: filePathSuffix === '' ? undefined : filePathSuffix
+					override_file_path_suffix: filePathSuffix === '' ? undefined : filePathSuffix,
+					override_season_number: seasonOverride
 				}
 			}
 		});
@@ -160,7 +161,8 @@
 				<SelectFilePathSuffixDialog
 					bind:filePathSuffix
 					media={show}
-					callback={() => downloadTorrent(torrent.id)}
+					seasons={torrent.season}
+					callback={(seasonOverride) => downloadTorrent(torrent.id, seasonOverride)}
 				/>
 			</Table.Cell>
 		{/snippet}
